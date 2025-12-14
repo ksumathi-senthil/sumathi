@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nodechart.fullname" . }}-wezvafrontendapp
+  labels:
+  {{- include "nodechart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.wezvafrontendapp.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wezvafrontendapp
+    {{- include "nodechart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wezvafrontendapp
+      {{- include "nodechart.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - env:
+        - name: KUBERNETES_CLUSTER_DOMAIN
+          value: {{ quote .Values.kubernetesClusterDomain }}
+        image: {{ .Values.wezvafrontendapp.wezvafrontendapp.image.repository }}:{{ .Values.wezvafrontendapp.wezvafrontendapp.image.tag
+          | default .Chart.AppVersion }}
+        imagePullPolicy: {{ .Values.wezvafrontendapp.wezvafrontendapp.imagePullPolicy }}
+        name: wezvafrontendapp
+        ports:
+        - containerPort: 3000
+        resources: {{- toYaml .Values.wezvafrontendapp.wezvafrontendapp.resources | nindent
+          10 }}
+      imagePullSecrets:
+      - name: awsecr-cred
+      nodeSelector: {{- toYaml .Values.wezvafrontendapp.nodeSelector | nindent 8 }}
+      serviceAccountName: {{ include "nodechart.serviceAccountName" . }}
+      tolerations: {{- toYaml .Values.wezvafrontendapp.tolerations | nindent 8 }}
+      topologySpreadConstraints: {{- toYaml .Values.wezvafrontendapp.topologySpreadConstraints
+        | nindent 8 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nodechart.fullname" . }}-backend-svc
+  labels:
+  {{- include "nodechart.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.backendSvc.type }}
+  selector:
+    app.kubernetes.io/name: wezvafrontendapp
+    {{- include "nodechart.selectorLabels" . | nindent 4 }}
+  ports:
+  {{- .Values.backendSvc.ports | toYaml | nindent 2 }}
